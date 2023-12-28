@@ -79,9 +79,9 @@ int main(void) {
 
   Pattern pattern = pattern_new();
   GameState game_state = GAME_STATE_START;
-  int level = 1;
+  int score = 1;
   double time = 0;
-  int player_choice = 0;
+  int input_button = 0;
   double lightining[BUTTON_COUNT] = {0};
 
   for (int i = 0; i < BUTTON_COUNT; i++) {
@@ -106,7 +106,7 @@ int main(void) {
       break;
     }
     case GAME_STATE_PLAYBACK: {
-      if (level * (SHOW_TIME + WAIT_TIME) < time) {
+      if (score * (SHOW_TIME + WAIT_TIME) < time) {
         game_state = GAME_STATE_INPUT;
         time = 0;
         break;
@@ -119,43 +119,42 @@ int main(void) {
       break;
     }
     case GAME_STATE_INPUT: {
-      bool animating = false;
-      for (int i = 0; i < BUTTON_COUNT; i++) {
-        if (lightining[i] < SHOW_TIME + WAIT_TIME) {
-          animating = true;
-          if (lightining[i] < SHOW_TIME) {
-            DrawCircleV(index_to_vec(i), RADIUS, ColorBrightness(colors[i % COLORS_COUNT], 0));
-          }
-          lightining[i] += GetFrameTime();
-        }
-      }
-      if (!animating && player_choice == level) {
-        if (time > WAIT_TIME * 2) {
-          game_state = GAME_STATE_PLAYBACK;
-          player_choice = 0;
-          time = 0;
-          level++;
-        } else {
-          time += GetFrameTime();
-        }
-        break;
-      }
-      if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && player_choice < level) {
+      if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && input_button < score) {
         int i = GetMouseX() / RECTANGLE_WIDTH;
         if (!CheckCollisionPointCircle((Vector2){GetMouseX(), GetMouseY()}, index_to_vec(i), RADIUS)) {
           break;
         }
-        if (pattern_get(&pattern, player_choice) == i) {
+        if (pattern_get(&pattern, input_button) == i) {
           lightining[i] = 0;
-          player_choice++;
+          input_button++;
         } else {
           game_state = GAME_STATE_START;
-          level = 1;
-          player_choice = 0;
-          for (int i = 0; i < BUTTON_COUNT; i++) {
-            lightining[i] = SHOW_TIME + WAIT_TIME;
+          score = 1;
+          input_button = 0;
+          for (int j = 0; j < BUTTON_COUNT; j++) {
+            lightining[j] = SHOW_TIME + WAIT_TIME;
           }
           pattern_randomize(&pattern);
+        }
+      }
+      bool animating = false;
+      for (int j = 0; j < BUTTON_COUNT; j++) {
+        if (lightining[j] < SHOW_TIME + WAIT_TIME) {
+          animating = true;
+          if (lightining[j] < SHOW_TIME) {
+            DrawCircleV(index_to_vec(j), RADIUS, ColorBrightness(colors[j % COLORS_COUNT], 0));
+          }
+          lightining[j] += GetFrameTime();
+        }
+      }
+      if (!animating && input_button == score) {
+        if (time > WAIT_TIME * 2) {
+          game_state = GAME_STATE_PLAYBACK;
+          input_button = 0;
+          time = 0;
+          score++;
+        } else {
+          time += GetFrameTime();
         }
       }
       break;
@@ -164,6 +163,7 @@ int main(void) {
 
     EndDrawing();
   }
+
   free(pattern.data);
   CloseWindow();
   return 0;
