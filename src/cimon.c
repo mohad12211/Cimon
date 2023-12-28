@@ -29,7 +29,12 @@ typedef struct {
   int *data;
 } Pattern;
 
-Pattern pattern_new() {
+Pattern pattern_new(void);
+void pattern_randomize(Pattern *p);
+int pattern_get(Pattern *p, int index);
+Vector2 index_to_vec(int rec_i);
+
+Pattern pattern_new(void) {
   int *data = malloc(INITIAL_COUNT * sizeof(int));
   for (int i = 0; i < INITIAL_COUNT; i++) {
     data[i] = rand() % BUTTON_COUNT;
