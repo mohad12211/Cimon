@@ -13,10 +13,10 @@ Color colors[] = {RED, GREEN, BLUE, YELLOW, PURPLE, SKYBLUE, PINK, BROWN};
 #define BUTTON_COUNT 4
 #define RADIUS ((int)(HEIGHT / (BUTTON_COUNT + 3)))
 #define RECTANGLE_WIDTH (WIDTH / BUTTON_COUNT)
-#define MAX_LEVEL 10
 #define DARKNESS -0.65
 #define SHOW_TIME 0.5
 #define WAIT_TIME 0.2
+#define INITIAL_COUNT 8
 
 typedef enum {
   GAME_STATE_START,
@@ -24,11 +24,43 @@ typedef enum {
   GAME_STATE_INPUT,
 } GameState;
 
-void randomize_pattern(int pattern[]) {
-  for (int i = 0; i < MAX_LEVEL; i++) {
-    pattern[i] = rand() % BUTTON_COUNT;
+typedef struct {
+  int count;
+  int *data;
+} Pattern;
+
+Pattern pattern_new() {
+  int *data = malloc(INITIAL_COUNT * sizeof(int));
+  for (int i = 0; i < INITIAL_COUNT; i++) {
+    data[i] = rand() % BUTTON_COUNT;
+  }
+  return (Pattern){INITIAL_COUNT, data};
+}
+
+void pattern_randomize(Pattern *p) {
+  for (int i = 0; i < p->count; i++) {
+    p->data[i] = rand() % BUTTON_COUNT;
   }
 }
+
+int pattern_get(Pattern *p, int index) {
+  if (index >= p->count) {
+    int new_count = p->count * 2;
+    p->data = realloc(p->data, new_count * sizeof(int));
+    for (int i = p->count; i < new_count; i++) {
+      p->data[i] = rand() % BUTTON_COUNT;
+    }
+    p->count = new_count;
+  }
+  return p->data[index];
+}
+
+// typedef struct {
+//   GameState game_state;
+//   int level;
+//   double time;
+//   int input_index;
+// } State;
 
 Vector2 index_to_vec(int rec_i) {
   int rec_start = rec_i * RECTANGLE_WIDTH;
@@ -45,8 +77,8 @@ int main(void) {
   SetTargetFPS(60);
   InitWindow(WIDTH, HEIGHT, "Remember");
 
+  Pattern pattern = pattern_new();
   GameState game_state = GAME_STATE_START;
-  int pattern[MAX_LEVEL] = {0};
   int level = 1;
   double time = 0;
   int player_choice = 0;
@@ -55,7 +87,7 @@ int main(void) {
   for (int i = 0; i < BUTTON_COUNT; i++) {
     lightining[i] = SHOW_TIME + WAIT_TIME;
   }
-  randomize_pattern(pattern);
+  pattern_randomize(&pattern);
 
   while (!WindowShouldClose()) {
     BeginDrawing();
@@ -80,7 +112,7 @@ int main(void) {
         break;
       }
       if (fmod(time, SHOW_TIME + WAIT_TIME) < SHOW_TIME) {
-        int i = pattern[(int)(time / (SHOW_TIME + WAIT_TIME))];
+        int i = pattern_get(&pattern, time / (SHOW_TIME + WAIT_TIME));
         DrawCircleV(index_to_vec(i), RADIUS, ColorBrightness(colors[i % COLORS_COUNT], 0));
       }
       time += GetFrameTime();
@@ -110,19 +142,20 @@ int main(void) {
       }
       if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && player_choice < level) {
         int i = GetMouseX() / RECTANGLE_WIDTH;
-        if (CheckCollisionPointCircle((Vector2){GetMouseX(), GetMouseY()}, index_to_vec(i), RADIUS)) {
-          if (pattern[player_choice] == i) {
-            lightining[i] = 0;
-            player_choice++;
-          } else {
-            game_state = GAME_STATE_START;
-            level = 1;
-            player_choice = 0;
-            for (int i = 0; i < BUTTON_COUNT; i++) {
-              lightining[i] = SHOW_TIME + WAIT_TIME;
-            }
-            randomize_pattern(pattern);
+        if (!CheckCollisionPointCircle((Vector2){GetMouseX(), GetMouseY()}, index_to_vec(i), RADIUS)) {
+          break;
+        }
+        if (pattern_get(&pattern, player_choice) == i) {
+          lightining[i] = 0;
+          player_choice++;
+        } else {
+          game_state = GAME_STATE_START;
+          level = 1;
+          player_choice = 0;
+          for (int i = 0; i < BUTTON_COUNT; i++) {
+            lightining[i] = SHOW_TIME + WAIT_TIME;
           }
+          pattern_randomize(&pattern);
         }
       }
       break;
@@ -131,7 +164,7 @@ int main(void) {
 
     EndDrawing();
   }
-
+  free(pattern.data);
   CloseWindow();
   return 0;
 }
