@@ -37,7 +37,7 @@ $(OBJDIR) $(LIBOBJDIR) $(BINDIR) $(DEPDIR):
 clean:
 	rm -rf build
 
-run:
+run: all
 	$(BIN)
 
 $(DEPS):
